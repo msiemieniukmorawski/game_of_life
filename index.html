@@ -1,0 +1,244 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta http-equiv="X-UA-Compatible" content="ie=edge" />
+    <title>Conway's Game of Life</title>
+  </head>
+  <body>
+    <div class="inputs_generator">
+      <label>rows: <input type="number" class="rows" value="10"/></label>
+      <label>cols: <input type="number" class="cols" value="10"/></label>
+      <button class="change">change</button>
+    </div>
+    <div class="inputs_controls">
+      <button class="start">start</button>
+      <button class="stop">stop</button>
+      <button class="reset">rest</button>
+    </div>
+    <div class="container_genarator" id="gridContainer"></div>
+  </body>
+  <style>
+    .input_generator {
+      padding-bottom: 20px;
+    }
+    .row {
+      display: flex;
+    }
+    .col {
+      height: 20px;
+      width: 20px;
+      border: 1px solid #000;
+    }
+    .col.active {
+      background: red;
+    }
+  </style>
+
+  <script>
+    let rows = document.querySelector(".rows").value;
+    let cols = document.querySelector(".cols").value;
+
+    let play = false;
+    let grid = new Array(rows);
+    let nextGrid = new Array(rows);
+    let timer;
+    const time = 100;
+
+    function init() {
+      for (let i = 0; i < rows; i++) {
+        grid[i] = new Array(cols);
+        nextGrid[i] = new Array(cols);
+      }
+    }
+
+    function reset() {
+      for (let i = 0; i < rows; i++) {
+        for (let j = 0; j < cols; j++) {
+          grid[i][j] = 0;
+          nextGrid[i][j] = 0;
+        }
+      }
+    }
+
+    function copyAndReset() {
+      for (let i = 0; i < rows; i++) {
+        for (let j = 0; j < cols; j++) {
+          grid[i][j] = nextGrid[i][j];
+          nextGrid[i][j] = 0;
+        }
+      }
+    }
+
+    // Initialize
+    function initialize() {
+      create();
+      init();
+      reset();
+      setupControlButtons();
+    }
+
+    // Lay out the board
+    function create() {
+      const container = document.querySelector(".container_genarator");
+      document.querySelector(".container_genarator").innerHTML = "";
+
+      const table = document.createElement("div");
+
+      for (let i = 0; i < rows; i++) {
+        const row = document.createElement("div");
+        row.setAttribute("class", "row");
+        for (let j = 0; j < cols; j++) {
+          //
+          const col = document.createElement("div");
+          col.setAttribute("id", i + "_" + j);
+          col.setAttribute("class", "col");
+
+          col.onclick = cellClickHandler;
+          row.appendChild(col);
+        }
+        table.appendChild(row);
+      }
+      container.appendChild(table);
+    }
+
+    function cellClickHandler() {
+      let rowcol = this.id.split("_");
+      let row = rowcol[0];
+      let col = rowcol[1];
+
+      if (this.classList.contains("active")) {
+        this.classList.remove("active");
+        grid[row][col] = 0;
+      } else {
+        this.classList.add("active");
+        grid[row][col] = 1;
+      }
+    }
+
+    function updateView() {
+      for (let i = 0; i < rows; i++) {
+        for (let j = 0; j < cols; j++) {
+          let cell = document.getElementById(i + "_" + j);
+          if (grid[i][j] == 0) {
+            cell.classList.remove("active");
+          } else {
+            cell.classList.add("active");
+          }
+        }
+      }
+    }
+
+    function setupControlButtons() {
+      const startButton = document
+        .querySelector(".start")
+        .addEventListener("click", startButtonHandler);
+      const stopButton = document
+        .querySelector(".stop")
+        .addEventListener("click", stopButtonHandler);
+      const clearButton = document
+        .querySelector(".reset")
+        .addEventListener("click", clearButtonHandler);
+      const changeButton = document
+        .querySelector(".change")
+        .addEventListener("click", changeButtonHandler);
+    }
+
+    function clearButtonHandler() {
+      play = false;
+      clearTimeout(timer);
+      let cellsList = document.querySelectorAll(".active");
+      let cells = [];
+      for (let i = 0; i < cellsList.length; i++) {
+        cells.push(cellsList[i]);
+        cellsList[i].classList.remove("active");
+      }
+      reset();
+    }
+
+    function startButtonHandler() {
+      play = true;
+      work();
+    }
+
+    function stopButtonHandler() {
+      play = false;
+      clearTimeout(timer);
+    }
+
+    function changeButtonHandler() {
+        rows = document.querySelector(".rows").value;
+        cols = document.querySelector(".cols").value;
+      initialize();
+    }
+
+    function work() {
+      computeNextGen();
+
+      if (play) {
+        timer = setTimeout(work, time);
+      }
+    }
+
+    function computeNextGen() {
+      for (let i = 0; i < rows; i++) {
+        for (let j = 0; j < cols; j++) {
+          applyRules(i, j);
+        }
+      }
+      copyAndReset();
+      updateView();
+    }
+
+    function applyRules(row, col) {
+      const numNeighbors = countNeighbors(row, col);
+      if (grid[row][col] == 1) {
+        if (numNeighbors < 2) {
+          nextGrid[row][col] = 0;
+        } else if (numNeighbors == 2 || numNeighbors == 3) {
+          nextGrid[row][col] = 1;
+        } else if (numNeighbors > 3) {
+          nextGrid[row][col] = 0;
+        }
+      } else if (grid[row][col] == 0) {
+        if (numNeighbors == 3) {
+          nextGrid[row][col] = 1;
+        }
+      }
+    }
+
+    function countNeighbors(row, col) {
+      let count = 0;
+      if (row - 1 >= 0) {
+        if (grid[row - 1][col] == 1) count++;
+      }
+      if (row - 1 >= 0 && col - 1 >= 0) {
+        if (grid[row - 1][col - 1] == 1) count++;
+      }
+      if (row - 1 >= 0 && col + 1 < cols) {
+        if (grid[row - 1][col + 1] == 1) count++;
+      }
+      if (col - 1 >= 0) {
+        if (grid[row][col - 1] == 1) count++;
+      }
+      if (col + 1 < cols) {
+        if (grid[row][col + 1] == 1) count++;
+      }
+      if (row + 1 < rows) {
+        if (grid[row + 1][col] == 1) count++;
+      }
+      if (row + 1 < rows && col - 1 >= 0) {
+        if (grid[row + 1][col - 1] == 1) count++;
+      }
+      if (row + 1 < rows && col + 1 < cols) {
+        if (grid[row + 1][col + 1] == 1) count++;
+      }
+      return count;
+    }
+
+    (() => {
+      initialize();
+    })();
+  </script>
+</html>
